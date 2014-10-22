@@ -64,30 +64,52 @@ sub import_mbx_file {
     my $delivered = 0;
 
     while ( $line = readline($fh) ) {
-        $line =~ m/( \d|\d\d)-(\w\w\w)-(\d\d\d\d) (\d\d):(\d\d):(\d\d) ([+-])(\d\d)(\d\d),(\d+);([[:xdigit:]]{8})([[:xdigit:]]{4})-([[:xdigit:]]{8})\r\n$/ or die("Syntax error in MBX file $file");
+        # tidyoff -- perltidy would wreak havoc on this poor expression
 
-        if ( $13 eq '00000000' ) {
+        my ( $date, $time, $metadata ) = split /\s+/, $line;
+
+        my ( $day, $month, $year ) = (
+            $date =~ /^( \d|\d\d)-(\w{3})-(\d{4})$/
+        ) or die('Invalid syntax: Bad date');
+
+        my ( $hour, $minute, $second ) = (
+            $time =~ /^(\d{2}):(\d{2}):(\d{2})$/
+        ) or die('Invalid syntax: Bad timestamp');
+
+        my ( $tz, $size, $attributes ) = (
+            $metadata =~ /^([+\-]\d{4}),(\d+);(\S+)$/
+        ) or die('Invalid syntax: Bad metadata');
+
+        my ( $tzNegative, $tzHourOffset, $tzMinuteOffset ) = (
+            $tz =~ /^([+\-])(\d{2})(\d{2})$/
+        ) or die('Invalid syntax: Bad timezone offset');
+
+        my ( $unused, $hexFlags, $uid ) = (
+            $attributes
+                =~
+            /^([[:xdigit:]]{8})([[:xdigit:]]{4})-([[:xdigit:]]{8})$/
+        ) or die('Invalid syntax: Bad attributes');
+
+        if ( $uid eq '00000000' ) {
             $lazyuid++;
         }
         else {
-            $lazyuid = hex($13);
+            $lazyuid = hex($uid);
         }
 
-        # tidyoff -- perltidy would wreak havoc on this poor expression
         my $hexuid = sprintf( '%08x', $lazyuid );
 
         my $flags = 
-          ( ( hex($12) & 0x1 ) ? 'S' : '' )
-          . ( ( hex($12) & 0x2 ) ? 'T' : '' )
-          . ( ( hex($12) & 0x4 ) ? 'F' : '' )
-          . ( ( hex($12) & 0x8 ) ? 'R' : '' );
+            ( ( hex($hexFlags) & 0x1 ) ? 'S' : '' )
+          . ( ( hex($hexFlags) & 0x2 ) ? 'T' : '' )
+          . ( ( hex($hexFlags) & 0x4 ) ? 'F' : '' )
+          . ( ( hex($hexFlags) & 0x8 ) ? 'R' : '' );
     
         my $timestamp = Time::Local::timegm(
-            $6, $5, $4, $1 + 0, $MONTHS{$2}, $3 )
-            + ( ( $8 eq '-' ? 1 : -1 ) * ( $8 * 60 + $9 ) * 60 );
+            $second, $minute, $hour, $day + 0, $MONTHS{$month}, $year )
+            + ( ( $tzNegative eq '-' ? 1 : -1 ) * ( $tzHourOffset * 60 + $tzMinuteOffset ) * 60 );
         # tidyon
 
-        my $size  = $10;
         my $start = tell($fh);
         my $end   = $start + $size - 1;
 
