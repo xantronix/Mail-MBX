@@ -6,6 +6,8 @@ use warnings;
 use Mail::Dir            ();
 use Mail::Dir::MBX::File ();
 
+our $VERSION = '0.01';
+
 our @ISA = qw(Mail::Dir);
 
 sub import_mbx_file {

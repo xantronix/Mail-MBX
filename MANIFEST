@@ -1,0 +1,9 @@
+Changes
+COPYRIGHT
+lib/Mail/Dir/MBX/File.pm
+lib/Mail/Dir/MBX/Header.pm
+lib/Mail/Dir/MBX/Message.pm
+lib/Mail/Dir/MBX.pm
+LICENSE
+Makefile.PL
+MANIFEST			This list of files
