@@ -64,8 +64,9 @@ sub import_mbx_file {
     my $delivered = 0;
 
     while ( $line = readline($fh) ) {
+        #
         # tidyoff -- perltidy would wreak havoc on this poor expression
-
+        #
         my ( $date, $time, $metadata ) = split /\s+/, $line;
 
         my ( $day, $month, $year ) = (
@@ -106,8 +107,10 @@ sub import_mbx_file {
           . ( ( hex($hexFlags) & 0x8 ) ? 'R' : '' );
     
         my $timestamp = Time::Local::timegm(
-            $second, $minute, $hour, $day + 0, $MONTHS{$month}, $year )
-            + ( ( $tzNegative eq '-' ? 1 : -1 ) * ( $tzHourOffset * 60 + $tzMinuteOffset ) * 60 );
+            $second, $minute, $hour, $day + 0, $MONTHS{$month}, $year
+        ) + ( ( $tzNegative eq '-' ? 1 : -1 )
+          * ( $tzHourOffset * 60 + $tzMinuteOffset ) * 60 );
+
         # tidyon
 
         my $start = tell($fh);
