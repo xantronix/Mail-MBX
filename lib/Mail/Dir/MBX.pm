@@ -3,21 +3,101 @@ package Mail::Dir::MBX;
 use strict;
 use warnings;
 
-use Mail::Dir            ();
-use Mail::Dir::MBX::File ();
+use Mail::Dir::MBX::Message ();
 
 our $VERSION = '0.01';
 
-our @ISA = qw(Mail::Dir);
+sub open {
+    my ( $class, $file ) = @_;
 
-sub import_mbx_file {
-    my ( $self, $file ) = @_;
+    my $uidvalidity;
+    my @keywords;
 
-    my $mbx       = Mail::Dir::MBX::File->open($file);
+    open( my $fh, '<', $file ) or die("Unable to open mailbox file $file: $!");
+
+    my $line = readline($fh);
+
+    #
+    # If the first line of the file is empty, then
+    #
+    if ( !defined $line ) {
+        return;
+    }
+
+    elsif ( $line ne "*mbx*\r\n" ) {
+        die("File $file is not an MBX file");
+    }
+
+    $line = readline($fh);
+
+    if ( $line =~ /^([[:xdigit:]]{8})([[:xdigit:]]{8})\r\n$/ ) {
+        $uidvalidity = hex($1);
+    }
+    else {
+        die("File $file has invalid UID line");
+    }
+
+    foreach ( 0 .. 29 ) {
+        chomp( $line = readline($fh) );
+
+        if ( $line ne '' ) {
+            push( @keywords, $line );
+        }
+    }
+
+    seek( $fh, 2048, 0 );
+
+    return bless {
+        'file'        => $file,
+        'fh'          => $fh,
+        'uidvalidity' => $uidvalidity,
+        'keyword'     => \@keywords,
+        'uid'         => 0
+    }, $class;
+}
+
+sub close {
+    my ($self) = @_;
+
+    if ( defined $self->{'fh'} ) {
+        close $self->{'fh'};
+        undef $self->{'fh'};
+    }
+
+    return;
+}
+
+sub DESTROY {
+    my ($self) = @_;
+
+    $self->close;
+
+    return;
+}
+
+sub message {
+    my ($self) = @_;
+
+    if ( eof $self->{'fh'} ) {
+        return;
+    }
+
+    my $message = Mail::Dir::MBX::Message->read( $self->{'fh'} );
+
+    if ( $message->{'uid'} == 0 ) {
+        $message->{'uid'} = ++$self->{'uid'};
+    }
+
+    return $message;
+}
+
+sub import_to_maildir {
+    my ( $self, $maildir ) = @_;
+
     my $delivered = 0;
 
-    while ( my $mbx_message = $mbx->message ) {
-        my $maildir_message = $self->deliver(
+    while ( my $mbx_message = $self->message ) {
+        my $maildir_message = $maildir->deliver(
             sub {
                 my ($fh) = @_;
 
@@ -30,7 +110,7 @@ sub import_mbx_file {
         $maildir_message->mark( $mbx_message->{'flags'} );
     }
 
-    $mbx->close;
-
     return $delivered;
 }
+
+1;
