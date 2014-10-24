@@ -91,26 +91,4 @@ sub message {
     return $message;
 }
 
-sub import_to_maildir {
-    my ( $self, $maildir ) = @_;
-
-    my $delivered = 0;
-
-    while ( my $mbx_message = $self->message ) {
-        my $maildir_message = $maildir->deliver(
-            sub {
-                my ($fh) = @_;
-
-                $mbx_message->write_to_handle($$fh);
-
-                $delivered++;
-            }
-        );
-
-        $maildir_message->mark( $mbx_message->{'flags'} );
-    }
-
-    return $delivered;
-}
-
 1;
