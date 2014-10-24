@@ -1,9 +1,9 @@
-package Mail::Dir::MBX;
+package Mail::MBX;
 
 use strict;
 use warnings;
 
-use Mail::Dir::MBX::Message ();
+use Mail::MBX::Message ();
 
 our $VERSION = '0.01';
 
@@ -82,7 +82,7 @@ sub message {
         return;
     }
 
-    my $message = Mail::Dir::MBX::Message->read( $self->{'fh'} );
+    my $message = Mail::MBX::Message->read( $self->{'fh'} );
 
     if ( $message->{'uid'} == 0 ) {
         $message->{'uid'} = ++$self->{'uid'};

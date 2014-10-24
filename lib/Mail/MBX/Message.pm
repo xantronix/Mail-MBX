@@ -1,4 +1,4 @@
-package Mail::Dir::MBX::Message;
+package Mail::MBX::Message;
 
 use strict;
 use warnings;

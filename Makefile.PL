@@ -8,16 +8,13 @@
 use ExtUtils::MakeMaker;
 
 WriteMakefile(
-    'NAME'         => 'Mail::Dir::MBX',
+    'NAME'         => 'Mail::MBX',
     'VERSION_FROM' => 'lib/Mail/Dir/MBX.pm',
     'AUTHOR'       => 'Xan Tronix <xan@cpan.org>',
     'LICENSE'      => 'mit',
     'ABSTRACT'     => 'Migrate MBX mailboxes to Maildir',
 
-    'PREREQ_PM' => {
-        'Mail::Dir'   => '0.02',
-        'Time::Local' => 0
-    },
+    'PREREQ_PM' => { 'Time::Local' => 0 },
 
     'BUILD_REQUIRES' => {},
 
