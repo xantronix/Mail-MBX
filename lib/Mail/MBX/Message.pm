@@ -1,5 +1,42 @@
 package Mail::MBX::Message;
 
+=head1 NAME
+
+Mail::MBX::Message - An MBX mailbox message object
+
+=head1 SYNOPSIS
+
+    use Mail::MBX ();
+
+    my $mbx = Mail::MBX->open('mailbox.mbx');
+
+    #
+    # Fetch and read first message in mailbox
+    #
+    my $message = $mbx->message;
+
+    #
+    # Write message body to standard output
+    #
+    while (my $readlen = $message->read(my $buf, 4096)) {
+        print $buf;
+    }
+
+    $mbx->close;
+
+=head1 DESCRIPTION
+
+C<Mail::MBX::Message> represents an MBX message object within an existing
+C<L<Mail::MBX>> file object.  Because C<Mail::MBX::Message> objects contain
+state specific to the parent object's file handle, only one message can be
+read per mailbox at a time.
+
+=head1 USAGE
+
+=over
+
+=cut
+
 use strict;
 use warnings;
 
@@ -20,9 +57,15 @@ my %MONTHS = (
     'Dec' => 11
 );
 
-my $BUF_SIZE = 4096;
+=item C<Mail::MBX::Message-E<gt>parse(I<$fh>)>
 
-sub read {
+Not intended to be used as part of a public interface.  Given the file handle
+specified in I<$fh>, this method will return a new C<Mail::MBX::Message> object
+representing the message found at the current position of I<$fh>.
+
+=cut
+
+sub parse {
     my ( $class, $fh ) = @_;
 
     if ( eof $fh ) {
@@ -39,7 +82,10 @@ sub read {
 
     my ( $day, $month, $year ) = (
         $date =~ /^( \d|\d\d)-(\w{3})-(\d{4})$/
-    ) or die('Invalid syntax: Bad date');
+    ) or do {
+        print "What? '$date'\n";
+        die('Invalid syntax: Bad date');
+    };
 
     my ( $hour, $minute, $second ) = (
         $time =~ /^(\d{2}):(\d{2}):(\d{2})$/
@@ -78,30 +124,64 @@ sub read {
         'timestamp' => $timestamp,
         'flags'     => $flags,
         'size'      => $size,
-        'offset'    => $offset
+        'offset'    => $offset,
+        'remaining' => $size,
+        'current'   => $offset
     }, $class;
 }
 
-sub write_to_handle {
-    my ( $self, $outfh ) = @_;
+=item C<$message-E<gt>reset()>
 
-    my $remaining = $self->{'size'};
+Reset internal file handle position to beginning of message.
+
+=cut
+
+sub reset {
+    my ($self) = @_;
+
+    @{$self}{qw(remaining current)} = @{$self}{qw(size offset)};
 
     seek( $self->{'fh'}, $self->{'offset'}, 0 );
 
-    while ( $remaining > 0 ) {
-        my $len = $BUF_SIZE < $remaining ? $BUF_SIZE : $remaining;
+    return;
+}
 
-        my $readlen = CORE::read( $self->{'fh'}, my $buf, $len );
+=item C<$message-E<gt>read(I<$buf>, I<$len>)>
 
-        if ( !defined $readlen ) {
-            die("Error reading message from file: $!");
-        }
+Read at most I<$len> bytes from the current message, into a scalar variable
+in the argument of I<$buf>, and return the number of bytes actually read from
+the current message.
 
-        print {$outfh} $buf;
+=cut
 
-        $remaining -= $readlen;
+sub read {
+    my ( $self, $buf, $len ) = @_;
+
+    if ( $self->{'remaining'} <= 0 ) {
+        return;
     }
 
-    return $self->{'size'};
+    $len = $self->{'remaining'} if $len > $self->{'remaining'};
+
+    my $readlen = CORE::read( $self->{'fh'}, $_[1], $len );
+
+    $self->{'remaining'} -= $readlen;
+
+    return $readlen;
 }
+
+1;
+
+=back
+
+=cut
+
+__END__
+
+=head1 AUTHOR
+
+Written by Xan Tronix <xan@cpan.org>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014, cPanel, Inc.  Distributed under the terms of the MIT license.

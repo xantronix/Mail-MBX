@@ -1,11 +1,48 @@
 package Mail::MBX;
 
+=head1 NAME
+
+Mail::MBX - Read MBX mailbox files
+
+=head1 SYNOPSIS
+
+    use Mail::MBX ();
+
+    my $mbx = Mail::MBX->open('mailbox.mbx');
+
+    while (my $message = $mbx->message) {
+        while ($message->read(my $buf, 4096)) {
+            # Do something with the message body
+        }
+    }
+
+    $mbx->close;
+
+=head1 DESCRIPTION
+
+C<Mail::MBX> provides a reasonable way to read mailboxes in the MBX format, as
+used by the University of Washington's UW-IMAP reference implementation.  At
+present, only sequential reading is supported, though this is ideal for mailbox
+format conversion tasks.
+
+=head1 OPENING MAILBOXES
+
+=over
+
+=cut
+
 use strict;
 use warnings;
 
 use Mail::MBX::Message ();
 
 our $VERSION = '0.01';
+
+=item C<Mail::MBX-E<gt>open(I<$file>)>
+
+Open an MBX mailbox file, returning a new C<Mail::MBX> object.
+
+=cut
 
 sub open {
     my ( $class, $file ) = @_;
@@ -56,6 +93,12 @@ sub open {
     }, $class;
 }
 
+=item C<$mbx-E<gt>close()>
+
+Close the current mailbox object.
+
+=cut
+
 sub close {
     my ($self) = @_;
 
@@ -75,6 +118,15 @@ sub DESTROY {
     return;
 }
 
+=item C<$mbx-E<gt>message()>
+
+Return the current MBX message, in the form of a C<L<Mail::MBX::Message>>
+object, and move the internal file handle to the next message.
+
+See C<L<Mail::MBX::Message>> for further details on accessing message contents.
+
+=cut
+
 sub message {
     my ($self) = @_;
 
@@ -82,7 +134,7 @@ sub message {
         return;
     }
 
-    my $message = Mail::MBX::Message->read( $self->{'fh'} );
+    my $message = Mail::MBX::Message->parse( $self->{'fh'} );
 
     if ( $message->{'uid'} == 0 ) {
         $message->{'uid'} = ++$self->{'uid'};
@@ -91,4 +143,18 @@ sub message {
     return $message;
 }
 
+=back
+
+=cut
+
 1;
+
+__END__
+
+=head1 AUTHOR
+
+Written by Xan Tronix <xan@cpan.org>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 cPanel, Inc.  Distributed under the terms of the MIT license.
