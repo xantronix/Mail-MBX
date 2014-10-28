@@ -82,10 +82,7 @@ sub parse {
 
     my ( $day, $month, $year ) = (
         $date =~ /^( \d|\d\d)-(\w{3})-(\d{4})$/
-    ) or do {
-        print "What? '$date'\n";
-        die('Invalid syntax: Bad date');
-    };
+    ) or die('Invalid syntax: Bad date');
 
     my ( $hour, $minute, $second ) = (
         $time =~ /^(\d{2}):(\d{2}):(\d{2})$/
@@ -99,11 +96,11 @@ sub parse {
         $tz =~ /^([+\-])(\d{2})(\d{2})$/
     ) or die('Invalid syntax: Bad timezone offset');
 
-    my ( $unused, $hexFlags, $hexUid ) = (
-        $attributes =~ /^([[:xdigit:]]{8})([[:xdigit:]]{4})-([[:xdigit:]]{8})$/
+    my ( $hexFlags, $hexUid ) = (
+        $attributes =~ /^[[:xdigit:]]{8}([[:xdigit:]]{4})-([[:xdigit:]]{8})$/
     ) or die('Invalid syntax: Bad attributes');
 
-    my $flags = 
+    my $flags =
         ( ( hex($hexFlags) & 0x1 ) ? 'S' : '' )
       . ( ( hex($hexFlags) & 0x2 ) ? 'T' : '' )
       . ( ( hex($hexFlags) & 0x4 ) ? 'F' : '' )
